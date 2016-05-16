@@ -10,7 +10,8 @@ import compiler.analysis.ControlFlow
 import nir.Shows.brace
 import nir._
 
-class GenTextualLLVM(assembly: Seq[Defn]) extends GenShow(assembly) {
+class GenTextualLLVM(target: Target, assembly: Seq[Defn])
+    extends GenShow(assembly) {
   private val fresh = new Fresh("gen")
   private val globals = assembly.collect {
     case Defn.Var(_, n, ty, _)     => n -> ty
@@ -18,7 +19,8 @@ class GenTextualLLVM(assembly: Seq[Defn]) extends GenShow(assembly) {
     case Defn.Declare(_, n, sig)   => n -> sig
     case Defn.Define(_, n, sig, _) => n -> sig
   }.toMap
-  private val prelude = sh"declare i32 @__gxx_personality_v0(...)"
+  private val prelude =
+    sh"declare i32 @__gxx_personality_v0(...)"
   private val gxxpersonality =
     sh"personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)"
 
@@ -31,8 +33,23 @@ class GenTextualLLVM(assembly: Seq[Defn]) extends GenShow(assembly) {
       case _: Defn.Define  => 5
       case _               => -1
     }
+    val triple: Show.Result = target
 
-    r(prelude +: sorted.map(d => sh"$d"), sep = nl(""))
+    r(triple +: prelude +: sorted.map(d => sh"$d"), sep = nl(""))
+  }
+
+  implicit val showTarget: Show[Target] = Show {
+    case Target(arch, vendor, os) =>
+      val rhs = quoted(sh"$arch-$vendor-$os")
+      sh"target triple = $rhs"
+  }
+
+  implicit val showTargetArch: Show[Target.Arch] = Show(_.toString.toLowerCase)
+
+  implicit val showTargetVendor: Show[Target.Vendor] = Show(_.toString.toLowerCase)
+
+  implicit val showTargetOS: Show[Target.OS] = Show {
+    case Target.OS.MacOSX(version) => sh"macosx$version"
   }
 
   implicit val showDefn: Show[Defn] = Show {

@@ -40,7 +40,7 @@ final class Compiler(opts: Opts) {
   }
 
   private def output(assembly: Seq[Defn]): Unit = {
-    val gen = new codegen.GenTextualLLVM(assembly)
+    val gen = new codegen.GenTextualLLVM(opts.target, assembly)
     serializeFile((defns, bb) => gen.gen(bb), assembly, opts.outpath)
   }
 
